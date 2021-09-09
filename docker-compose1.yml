@@ -1,0 +1,38 @@
+---
+version: '3'
+
+services:
+  mysql:
+    image: mariadb:latest
+    container_name: drupal-mysql
+    environment:
+      MARIADB_RANDOM_ROOT_PASSWORD: 'yes'
+      MARIADB_DATABASE: drupal
+      MARIADB_USER: drupal
+      MARIADB_PASSWORD: drupal
+    ports:
+      - 1011:3306
+
+  redis:
+    image: redis:latest
+    ports:
+      - 1012:6379
+  drupal:
+    image: drupal:8-apache
+    container_name: drupal
+    depends_on:
+      - mysql
+    restart: unless-stopped
+    ports:
+      - 1010:80
+    volumes:
+      - ./sites:/opt/drupal/web/sites/default/
+      - ./phpredis:/opt/drupal/web/modules/phpredis
+      - ./php_file:/tmp/phpfiles
+    command: [sh, -c, "sleep 180 && cd /opt/drupal/ && composer require drupal/redis"]
+    command: [sh, -c, "cd /opt/drupal/web/modules/phpredis && phpize && ./configure && make && make install"]
+    command: [sh, -c, "cp -r /tmp/phpfiles/* /usr/local/etc/php/ && sleep 3"]
+    command: [sh, -c, "sleep 120"]
+    links:
+      - redis
+      - mysql
